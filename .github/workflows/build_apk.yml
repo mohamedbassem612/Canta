@@ -23,6 +23,7 @@ jobs:
         with:
           distribution: jetbrains
           java-version: '21'
+          token: ${{ github.token }}
           cache: gradle
 
       - name: Install Android SDK packages
