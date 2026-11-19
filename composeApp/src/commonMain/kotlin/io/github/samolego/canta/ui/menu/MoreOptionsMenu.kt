@@ -10,6 +10,7 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.samolego.canta.generated.resources.Res
 import io.github.samolego.canta.generated.resources.badge_info
+import io.github.samolego.canta.generated.resources.export_app_list
 import io.github.samolego.canta.generated.resources.logs
 import io.github.samolego.canta.generated.resources.presets
 import io.github.samolego.canta.generated.resources.settings
@@ -21,6 +22,8 @@ fun MoreOptionsMenu(
         showBadgeInfoDialog: () -> Unit,
         navigateToPage: (route: String) -> Unit,
         onDismiss: () -> Unit,
+        onExportAppList: (() -> Unit)?,
+        exportEnabled: Boolean,
 ) {
 
     DropdownMenu(
@@ -28,6 +31,17 @@ fun MoreOptionsMenu(
             onDismissRequest = onDismiss,
             modifier = Modifier.width(200.dp)
     ) {
+        if (onExportAppList != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.export_app_list)) },
+                enabled = exportEnabled,
+                onClick = {
+                    onDismiss()
+                    onExportAppList()
+                },
+            )
+        }
+
         // Badge info dialog
         DropdownMenuItem(
                 text = { Text(stringResource(Res.string.badge_info)) },

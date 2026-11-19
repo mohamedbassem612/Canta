@@ -92,6 +92,7 @@ fun MainScreen(
                 openBadgesInfoDialog = mainViewModel::showBadgesExplanation,
                 navigateToPage = navigateToPage,
                 appListViewModel = appListViewModel,
+                platform = platform,
             )
         },
         floatingActionButton = {

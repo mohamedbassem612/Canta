@@ -35,11 +35,14 @@ import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import io.github.samolego.canta.APP_NAME
+import io.github.samolego.canta.core.CantaPlatform
+import io.github.samolego.canta.data.app.installedAppsMarkdown
 import io.github.samolego.canta.generated.resources.Res
 import io.github.samolego.canta.generated.resources.back
 import io.github.samolego.canta.generated.resources.clear_search
 import io.github.samolego.canta.generated.resources.filter
 import io.github.samolego.canta.generated.resources.more_options
+import io.github.samolego.canta.generated.resources.no_description_available
 import io.github.samolego.canta.generated.resources.search
 import io.github.samolego.canta.generated.resources.search_apps
 import io.github.samolego.canta.ui.menu.FiltersMenu
@@ -52,10 +55,12 @@ fun CantaTopBar(
         openBadgesInfoDialog: () -> Unit,
         navigateToPage: (route: String) -> Unit,
         appListViewModel: AppListViewModel,
+        platform: CantaPlatform,
 ) {
     var showMoreOptionsMenu by remember { mutableStateOf(false) }
     var showFiltersMenu by remember { mutableStateOf(false) }
     var searchActive by remember { mutableStateOf(false) }
+    val missingDescription = stringResource(Res.string.no_description_available)
     val searchFocusRequester = remember { FocusRequester() }
 
     TopAppBar(
@@ -144,6 +149,14 @@ fun CantaTopBar(
 
                 MoreOptionsMenu(
                         showMenu = showMoreOptionsMenu,
+                        onExportAppList = if (platform.supportsAppListExport) {
+                            { platform.saveAppList(installedAppsMarkdown(appListViewModel.apps, missingDescription)) }
+                        } else {
+                            null
+                        },
+                        exportEnabled = !appListViewModel.isLoading &&
+                            !appListViewModel.isLoadingBadges &&
+                            appListViewModel.apps.any { !it.isUninstalled },
                         showBadgeInfoDialog = openBadgesInfoDialog,
                         navigateToPage = navigateToPage,
                         onDismiss = { showMoreOptionsMenu = false },

@@ -1,16 +1,27 @@
 package io.github.samolego.canta.core
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
+import io.github.samolego.canta.generated.resources.Res
+import io.github.samolego.canta.generated.resources.app_list_export_failed
+import io.github.samolego.canta.generated.resources.app_list_exported
 import io.github.samolego.canta.util.LogUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.getString
 
 class AndroidCantaPlatform(
     private val context: Context,
@@ -23,15 +34,58 @@ class AndroidCantaPlatform(
     @Volatile
     private var biometricActivity: FragmentActivity? = null
 
-    /** Attach the activity (from `onCreate`); used for biometric prompts. */
+    private val exportScope = CoroutineScope(Dispatchers.Main)
+    private var appListLauncher: ActivityResultLauncher<String>? = null
+    private var pendingAppList: String? = null
+
+    override val supportsAppListExport = true
+
+    /** Attach the activity from `onCreate`, before it reaches STARTED. */
     fun attachActivity(activity: FragmentActivity) {
         biometricActivity = activity
+        appListLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.CreateDocument("text/markdown"),
+        ) { uri ->
+            val markdown = pendingAppList
+            pendingAppList = null
+            if (uri != null && markdown != null) {
+                exportScope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val output = checkNotNull(context.contentResolver.openOutputStream(uri))
+                            output.bufferedWriter(Charsets.UTF_8).use { it.write(markdown) }
+                        }
+                    }
+                    result.exceptionOrNull()?.let { LogUtils.e(TAG, "Failed to save app list", it) }
+                    val message = if (result.isSuccess) {
+                        Res.string.app_list_exported
+                    } else {
+                        Res.string.app_list_export_failed
+                    }
+                    showMessage(getString(message))
+                }
+            }
+        }
     }
 
     /** Detach the activity when it is destroyed. */
     fun detachActivity(activity: FragmentActivity) {
         if (biometricActivity === activity) {
             biometricActivity = null
+            appListLauncher = null
+        }
+    }
+
+    override fun saveAppList(markdown: String) {
+        val launcher = appListLauncher ?: return
+        if (pendingAppList != null) return
+        pendingAppList = markdown
+        try {
+            launcher.launch("Applist.md")
+        } catch (e: ActivityNotFoundException) {
+            pendingAppList = null
+            LogUtils.e(TAG, "No document picker available", e)
+            exportScope.launch { showMessage(getString(Res.string.app_list_export_failed)) }
         }
     }
 

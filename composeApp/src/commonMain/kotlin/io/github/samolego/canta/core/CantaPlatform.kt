@@ -28,6 +28,11 @@ interface CantaPlatform {
      */
     fun requireBiometric(title: String, subtitle: String, onSuccess: () -> Unit)
 
+    val supportsAppListExport: Boolean
+        get() = false
+
+    fun saveAppList(markdown: String) = Unit
+
     fun copyToClipboard(text: String)
     fun readClipboard(): String?
 }

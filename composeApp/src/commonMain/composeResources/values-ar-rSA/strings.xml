@@ -156,4 +156,7 @@
     <string name="device_no_longer_available">The selected device is no longer available. Please pick it again.</string>
     <string name="device_busy">The device is already in use by another program or browser tab. Close anything else using it, unplug the device and plug it back in, then pick it again.</string>
     <string name="device_busy_linux">The device is busy: another program on this computer has claimed it. On Linux this is often ModemManager, an adb server, or a file-transfer (MTP) monitor. Stop them (e.g. sudo systemctl stop ModemManager), unplug the phone and plug it back in, then pick it again.</string>
+    <string name="export_app_list">تصدير قائمة التطبيقات</string>
+    <string name="app_list_exported">تم حفظ قائمة التطبيقات</string>
+    <string name="app_list_export_failed">تعذّر حفظ قائمة التطبيقات</string>
 </resources>
