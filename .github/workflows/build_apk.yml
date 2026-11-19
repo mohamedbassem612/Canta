@@ -31,12 +31,39 @@ jobs:
         with:
           packages: "platforms;android-37.0 build-tools;36.0.0"
 
-      - name: Build debug APK
-        run: ./gradlew :androidApp:assembleDebug
+      - name: Configure release signing
+        env:
+          RELEASE_SIGNING: ${{ secrets.CANTA_RELEASE_SIGNING }}
+        run: |
+          umask 077
+          keystore="$RUNNER_TEMP/canta-release.p12"
+          if [[ -n "$RELEASE_SIGNING" ]]; then
+            password="${RELEASE_SIGNING%%$'\n'*}"
+            printf '%s' "${RELEASE_SIGNING#*$'\n'}" | base64 --decode > "$keystore"
+          else
+            echo "::warning::Using a temporary signing key. APK updates require a persistent signing key."
+            password="$(openssl rand -hex 32)"
+            export STORE_PASSWORD="$password"
+            keytool -genkeypair -keystore "$keystore" -storetype PKCS12 \
+              -storepass:env STORE_PASSWORD -alias canta -keyalg RSA -keysize 3072 \
+              -validity 10000 -dname 'CN=Canta Fork'
+          fi
+          echo "::add-mask::$password"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=canta\nkeyPassword=%s\n' \
+            "$keystore" "$password" "$password" > key.properties
+
+      - name: Build release APK
+        run: ./gradlew :androidApp:assembleRelease
+
+      - name: Verify APK signature and size
+        run: |
+          apk=androidApp/build/outputs/apk/release/androidApp-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          stat -c '%n %s bytes' "$apk" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Canta-debug
-          path: androidApp/build/outputs/apk/debug/*.apk
+          name: Canta-release
+          path: androidApp/build/outputs/apk/release/androidApp-release.apk
           if-no-files-found: error
